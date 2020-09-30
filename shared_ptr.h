@@ -53,13 +53,11 @@ public:
 
 
 template<typename T, typename D>
-class regular_control_block : public default_control_block<T>
+class regular_control_block : public default_control_block<T>, private D
 {
-private:
-    D deleter;
 public:
-    regular_control_block(T *ptr, D deleter) noexcept : default_control_block<T>(ptr), deleter(deleter) {}
-    void destroy(void) override { if (default_control_block<T>::obj != nullptr) deleter(default_control_block<T>::obj); }
+    regular_control_block(T *ptr, D deleter) noexcept : default_control_block<T>(ptr), D(std::move(deleter)) {}
+    void destroy(void) override { if (default_control_block<T>::obj != nullptr) D::operator()(default_control_block<T>::obj); }
 };
 
 template<typename T>
@@ -100,8 +98,8 @@ private:
     template<typename Y>
     friend class weak_ptr;
 public:
-    shared_ptr(void) : block(nullptr), ptr(nullptr) {}
-    explicit shared_ptr(std::nullptr_t) : shared_ptr() {}
+    shared_ptr(void) noexcept : block(nullptr), ptr(nullptr) {}
+    shared_ptr(std::nullptr_t) noexcept : shared_ptr() {}
     template<typename Y>
     explicit shared_ptr(Y *ptr) noexcept : block(new default_control_block(ptr)), ptr(ptr) {}
     template<typename Y>
