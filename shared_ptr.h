@@ -56,6 +56,7 @@ template<typename T, typename D>
 class regular_control_block : public default_control_block<T>, private D
 {
 public:
+    // move constructor of D should not throw
     regular_control_block(T *ptr, D deleter) noexcept : default_control_block<T>(ptr), D(std::move(deleter)) {}
     void destroy(void) override { if (default_control_block<T>::obj != nullptr) D::operator()(default_control_block<T>::obj); }
 };
@@ -105,7 +106,7 @@ public:
     template<typename Y>
     shared_ptr(const shared_ptr<Y> &s, T *al) noexcept : block(s.block), ptr(al) { if (block != nullptr) block->inc(); }
     template<typename Y, typename D>
-    shared_ptr(Y *ptr, D deleter) try : block(new regular_control_block<T, D>(ptr, deleter)), ptr(ptr)
+    shared_ptr(Y *ptr, D deleter) try : block(new regular_control_block<T, D>(ptr, std::move(deleter))), ptr(ptr)
     {}
     catch (...)
     {
@@ -192,7 +193,7 @@ public:
         {
             block = nullptr;
             ptr = nullptr;
-            block = new regular_control_block<Y, D>(r, deleter);
+            block = new regular_control_block<Y, D>(r, std::move(deleter));
             ptr = r;
         }
         catch (...)
